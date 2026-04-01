@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZapHive — Developer Panel</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <meta name="robots" content="noindex, nofollow">
+</head>
+<body id="dev-body">
+
+  <!-- ═══════════════════════════════════════════
+       ACCESS GATE
+  ════════════════════════════════════════════ -->
+  <div id="access-gate" role="main" aria-label="Developer access">
+    <div class="gate-box">
+      <div class="gate-logo">
+        <span class="zap">⚡Zap</span><span class="hive">Hive</span>
+      </div>
+      <p class="gate-sub">Developer Panel — Authorized Access Only</p>
+
+      <form id="code-form" novalidate>
+        <input
+          type="password"
+          id="code-input"
+          class="gate-input"
+          placeholder="Enter access code"
+          autocomplete="off"
+          aria-label="Access code"
+          maxlength="20"
+          required>
+        <button type="submit" class="gate-btn">Enter Dashboard</button>
+        <div id="gate-error" class="gate-error" role="alert" aria-live="polite"></div>
+      </form>
+
+      <p style="margin-top:1.5rem;font-size:0.75rem;color:var(--text-muted)">
+        <a href="index.html" style="color:var(--accent-blue)">← Back to ZapHive</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       DEVELOPER DASHBOARD
+  ════════════════════════════════════════════ -->
+  <div id="dev-dashboard" class="hidden" role="main" aria-label="Developer dashboard">
+
+    <!-- Nav -->
+    <nav style="background:var(--bg-nav);border-bottom:1px solid var(--border);padding:0 1.2rem;height:52px;display:flex;align-items:center;gap:1rem">
+      <div class="nav-logo">
+        <span class="lightning">⚡</span>
+        <span class="zap">Zap</span><span class="hive">Hive</span>
+      </div>
+      <span style="font-size:0.78rem;color:var(--text-muted);font-family:var(--font-display);letter-spacing:1px">DEV PANEL</span>
+      <div style="flex:1"></div>
+      <a href="index.html" style="color:var(--text-muted);font-size:0.78rem;margin-right:0.5rem">← Site</a>
+      <button id="logout-btn" class="logout-btn">Logout</button>
+    </nav>
+
+    <div id="dev-dashboard-inner">
+
+      <!-- Header -->
+      <div class="dev-header">
+        <h1>🛠 Developer Dashboard</h1>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="stats-row" role="region" aria-label="Site statistics">
+        <div class="stat-card">
+          <div class="s-val" id="stat-total">0</div>
+          <div class="s-label">Total Games</div>
+        </div>
+        <div class="stat-card">
+          <div class="s-val" id="stat-published">0</div>
+          <div class="s-label">Published</div>
+        </div>
+        <div class="stat-card">
+          <div class="s-val" id="stat-dev">0</div>
+          <div class="s-label">In Development</div>
+        </div>
+        <div class="stat-card">
+          <div class="s-val" id="stat-plays">0</div>
+          <div class="s-label">Total Plays</div>
+        </div>
+      </div>
+
+      <!-- Panels -->
+      <div class="dev-panels">
+
+        <!-- Upload Form Panel -->
+        <div class="panel" role="region" aria-label="Upload new game">
+          <h2>⬆ Upload New Game</h2>
+
+          <form id="upload-form" novalidate>
+
+            <div class="field">
+              <label for="upload-title">Game Title *</label>
+              <input type="text" id="upload-title" placeholder="e.g. Space Shooter" maxlength="80" required>
+            </div>
+
+            <div class="field">
+              <label for="upload-logo">Logo / Thumbnail URL</label>
+              <input type="url" id="upload-logo" placeholder="https://example.com/logo.png">
+            </div>
+
+            <div class="field">
+              <label for="upload-desc">Description</label>
+              <textarea id="upload-desc" rows="3" placeholder="Short description of the game…" maxlength="400"></textarea>
+            </div>
+
+            <div class="field">
+              <label for="upload-embed">Embed URL or iframe Code *</label>
+              <textarea id="upload-embed" rows="2" placeholder="https://game-url.com/ or &lt;iframe src=&quot;…&quot;&gt;&lt;/iframe&gt;" maxlength="2000"></textarea>
+            </div>
+
+            <div class="field">
+              <label for="upload-category">Category *</label>
+              <select id="upload-category" required>
+                <option value="">Select category…</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="upload-status">Status</label>
+              <select id="upload-status">
+                <option value="Published">Published</option>
+                <option value="In Development">In Development</option>
+              </select>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">⬆ Upload Game</button>
+              <button type="button" id="preview-btn" class="btn-secondary">👁 Preview</button>
+            </div>
+
+          </form>
+        </div>
+
+        <!-- Game Management Panel -->
+        <div class="panel" role="region" aria-label="Manage games">
+          <h2>📋 Manage Games</h2>
+          <div id="mgmt-list" class="game-mgmt-list" aria-label="Game list">
+            <!-- Populated by dev.js -->
+          </div>
+        </div>
+
+      </div><!-- /dev-panels -->
+
+    </div><!-- /dev-dashboard-inner -->
+  </div><!-- /dev-dashboard -->
+
+  <!-- ═══════════════════════════════════════════
+       EDIT MODAL
+  ════════════════════════════════════════════ -->
+  <div id="edit-modal" class="hidden" role="dialog" aria-modal="true" aria-label="Edit game">
+    <div class="modal-box">
+      <h3>✏️ Edit Game</h3>
+
+      <form id="edit-form" novalidate>
+
+        <div class="field">
+          <label for="edit-title">Game Title *</label>
+          <input type="text" id="edit-title" maxlength="80" required>
+        </div>
+
+        <div class="field">
+          <label for="edit-logo">Logo URL</label>
+          <input type="url" id="edit-logo">
+        </div>
+
+        <div class="field">
+          <label for="edit-desc">Description</label>
+          <textarea id="edit-desc" rows="3" maxlength="400"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="edit-embed">Embed URL / iframe Code</label>
+          <textarea id="edit-embed" rows="2" maxlength="2000"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="edit-category">Category *</label>
+          <select id="edit-category" required>
+            <option value="">Select category…</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="edit-status">Status</label>
+          <select id="edit-status">
+            <option value="Published">Published</option>
+            <option value="In Development">In Development</option>
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">💾 Save Changes</button>
+          <button type="button" id="edit-close" class="btn-secondary">Cancel</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       TOAST NOTIFICATION
+  ════════════════════════════════════════════ -->
+  <div id="dev-toast" class="hidden" role="status" aria-live="polite"></div>
+
+  <script src="dev.js"></script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZapHive — Loading Game…</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+<body>
+
+  <!-- ── GAME PAGE NAV ── -->
+  <nav id="game-page-nav" role="navigation" aria-label="Game page navigation">
+    <button class="back-btn" id="back-btn" aria-label="Back to homepage">
+      ← Back
+    </button>
+    <div class="nav-logo" aria-label="ZapHive">
+      <span class="lightning" aria-hidden="true">⚡</span>
+      <span class="zap">Zap</span><span class="hive">Hive</span>
+    </div>
+  </nav>
+
+  <!-- ── GAME META ── -->
+  <div id="game-meta" role="region" aria-label="Game info">
+    <img id="meta-logo" class="meta-logo" src="" alt="" loading="lazy">
+    <div class="meta-info">
+      <h1 id="meta-title">Loading…</h1>
+      <div class="meta-row">
+        <span id="meta-cat" class="meta-cat"></span>
+        <span id="meta-plays" class="meta-plays">▶ <span id="plays-count">0</span> plays</span>
+      </div>
+      <p id="meta-desc" class="meta-desc"></p>
+    </div>
+  </div>
+
+  <!-- ── IFRAME CONTAINER ── -->
+  <div id="iframe-container" role="main">
+    <div id="iframe-loading" aria-label="Loading game">
+      <div class="spinner" aria-hidden="true"></div>
+      <p>Loading game…</p>
+    </div>
+    <iframe
+      id="game-iframe"
+      title="Game"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-top-navigation-by-user-activation"
+      allowfullscreen
+      loading="lazy"
+      src=""
+      aria-label="Game window">
+    </iframe>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    const STORAGE_KEY = 'zaphive_games';
+
+    // ── Parse query param ────────────────────────
+    function getParam(name) {
+      return new URLSearchParams(window.location.search).get(name);
+    }
+
+    // ── Load data ────────────────────────────────
+    async function loadGames() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const p = JSON.parse(saved);
+          if (p && Array.isArray(p.games)) return p;
+        } catch (_) {}
+      }
+      const res = await fetch('games.json?v=' + Date.now());
+      if (!res.ok) throw new Error('Load failed');
+      return res.json();
+    }
+
+    // ── Escape HTML ──────────────────────────────
+    function esc(s) {
+      return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function fmt(n) {
+      if (n >= 1000000) return (n/1e6).toFixed(1)+'M';
+      if (n >= 1000)    return (n/1000).toFixed(1)+'K';
+      return String(n);
+    }
+
+    // ── Resolve embed URL ────────────────────────
+    function resolveEmbed(code) {
+      if (!code) return null;
+      if (/^https?:\/\//i.test(code)) return code;
+      const m = code.match(/src=["']([^"']+)["']/i);
+      return m ? m[1] : null;
+    }
+
+    // ── Back button ──────────────────────────────
+    document.getElementById('back-btn').addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+
+    // ── Main ─────────────────────────────────────
+    async function init() {
+      const id = getParam('id');
+      if (!id) { showError('No game ID provided.'); return; }
+
+      let data;
+      try { data = await loadGames(); }
+      catch (e) { showError('Could not load game data.'); return; }
+
+      const game = (data.games || []).find(g => g.id === id);
+      if (!game) { showError('Game not found.'); return; }
+      if (game.status !== 'Published') {
+        showError('This game is not yet available. Check back soon!');
+        return;
+      }
+
+      const embedUrl = resolveEmbed(game.embedCode);
+      if (!embedUrl) { showError('This game has no embed URL configured.'); return; }
+
+      // Populate meta
+      document.title = 'ZapHive — ' + game.title;
+
+      const logoEl = document.getElementById('meta-logo');
+      logoEl.src = game.logo || '';
+      logoEl.alt = game.title;
+      logoEl.onerror = function() { this.style.display = 'none'; };
+
+      document.getElementById('meta-title').textContent  = game.title;
+      document.getElementById('meta-cat').textContent    = game.category || '';
+      document.getElementById('meta-desc').textContent   = game.description || '';
+
+      // Increment play count
+      const idx = data.games.findIndex(g => g.id === id);
+      if (idx !== -1) {
+        data.games[idx].playCount = (data.games[idx].playCount || 0) + 1;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      }
+
+      document.getElementById('plays-count').textContent = fmt(data.games[idx]?.playCount || game.playCount || 0);
+
+      // Load iframe
+      const iframe = document.getElementById('game-iframe');
+      const loader = document.getElementById('iframe-loading');
+
+      iframe.addEventListener('load', () => {
+        loader.style.display = 'none';
+      });
+
+      // Timeout fallback: hide loader after 8s regardless
+      setTimeout(() => { loader.style.display = 'none'; }, 8000);
+
+      iframe.src = embedUrl;
+    }
+
+    function showError(msg) {
+      document.getElementById('iframe-loading').innerHTML =
+        '<div style="text-align:center;padding:2rem;color:var(--text-muted)">' +
+        '<div style="font-size:3rem;margin-bottom:1rem">⚠️</div>' +
+        '<p>' + esc(msg) + '</p>' +
+        '<a href="index.html" style="margin-top:1rem;display:inline-block;color:var(--accent-blue)">← Back to ZapHive</a>' +
+        '</div>';
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>

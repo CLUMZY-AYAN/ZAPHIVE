@@ -1,0 +1,136 @@
+{
+  "games": [
+    {
+      "id": "g001",
+      "title": "2048",
+      "logo": "https://play-lh.googleusercontent.com/7oHpUy4lFAqyFBPHYBLBHiDaMQYhRV_A8VRB8i5YITfgxF2-X5XGLF1cFBKoJ2aO5A=w240-h480-rw",
+      "description": "Slide the tiles and combine them to reach 2048! A classic number puzzle game that will keep your brain sharp.",
+      "category": "Puzzle",
+      "status": "Published",
+      "embedCode": "https://play2048.co/",
+      "playCount": 412,
+      "dateAdded": "2025-01-10"
+    },
+    {
+      "id": "g002",
+      "title": "Agar.io",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Agar.io_Logo.svg/512px-Agar.io_Logo.svg.png",
+      "description": "Grow your cell by consuming smaller cells and avoid being eaten by larger ones in this massive multiplayer arena!",
+      "category": "IO Games",
+      "status": "Published",
+      "embedCode": "https://agar.io/",
+      "playCount": 1840,
+      "dateAdded": "2025-01-12"
+    },
+    {
+      "id": "g003",
+      "title": "Slither.io",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Slither.io_logo.png/512px-Slither.io_logo.png",
+      "description": "Control your snake, consume glowing orbs, and become the longest snake on the server!",
+      "category": "IO Games",
+      "status": "Published",
+      "embedCode": "https://slither.io/",
+      "playCount": 2310,
+      "dateAdded": "2025-01-13"
+    },
+    {
+      "id": "g004",
+      "title": "Minesweeper",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Minesweeper_on_Windows_7.png/240px-Minesweeper_on_Windows_7.png",
+      "description": "The timeless classic. Clear the board without detonating a mine. Test your logic and luck!",
+      "category": "Puzzle",
+      "status": "Published",
+      "embedCode": "https://minesweeper.online/game/beginner",
+      "playCount": 677,
+      "dateAdded": "2025-01-15"
+    },
+    {
+      "id": "g005",
+      "title": "Krunker.io",
+      "logo": "https://krunker.io/img/krunker_icon.png",
+      "description": "Fast-paced first-person shooter right in your browser. No downloads needed. Jump in and frag!",
+      "category": "Action",
+      "status": "Published",
+      "embedCode": "https://krunker.io/",
+      "playCount": 3102,
+      "dateAdded": "2025-01-16"
+    },
+    {
+      "id": "g006",
+      "title": "Superhot",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/SUPERHOT_logo.svg/512px-SUPERHOT_logo.svg.png",
+      "description": "Time only moves when you move. Think your way through intense bullet-dodging action sequences.",
+      "category": "Action",
+      "status": "In Development",
+      "embedCode": "",
+      "playCount": 0,
+      "dateAdded": "2025-01-18"
+    },
+    {
+      "id": "g007",
+      "title": "Tiny Cars",
+      "logo": "https://images.crazygames.com/games/road-fury/cover-1559032664539.png",
+      "description": "Race through traffic, dodge obstacles, and hit top speed in this adrenaline-fueled driving game!",
+      "category": "Driving",
+      "status": "Published",
+      "embedCode": "https://www.crazygames.com/embed/road-fury",
+      "playCount": 885,
+      "dateAdded": "2025-01-20"
+    },
+    {
+      "id": "g008",
+      "title": "Wordle",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Wordle_196_example.svg/512px-Wordle_196_example.svg.png",
+      "description": "Guess the 5-letter word in 6 tries. A new word every day. Share your results!",
+      "category": "Puzzle",
+      "status": "Published",
+      "embedCode": "https://www.nytimes.com/games/wordle/index.html",
+      "playCount": 994,
+      "dateAdded": "2025-01-21"
+    },
+    {
+      "id": "g009",
+      "title": "Diep.io",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Diep.io_logo.png/512px-Diep.io_logo.png",
+      "description": "Upgrade your tank, shoot shapes and enemies, and dominate the leaderboard in this epic .io tank game.",
+      "category": "IO Games",
+      "status": "Published",
+      "embedCode": "https://diep.io/",
+      "playCount": 1430,
+      "dateAdded": "2025-01-22"
+    },
+    {
+      "id": "g010",
+      "title": "Pac-Man",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Pac-Man_arcade_game_logic_board_and_other_components.jpg/240px-Pac-Man_arcade_game_logic_board_and_other_components.jpg",
+      "description": "The original arcade legend. Eat all the dots, avoid the ghosts, and chomp your way to a high score!",
+      "category": "Arcade",
+      "status": "Published",
+      "embedCode": "https://freepacman.org/",
+      "playCount": 2089,
+      "dateAdded": "2025-01-23"
+    },
+    {
+      "id": "g011",
+      "title": "Tetris",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Tetris_logo_English.svg/512px-Tetris_logo_English.svg.png",
+      "description": "Stack falling blocks and clear lines in this legendary puzzle game. How long can you last?",
+      "category": "Arcade",
+      "status": "Published",
+      "embedCode": "https://tetris.com/play-tetris",
+      "playCount": 1760,
+      "dateAdded": "2025-01-24"
+    },
+    {
+      "id": "g012",
+      "title": "Skribbl.io",
+      "logo": "https://skribbl.io/res/skribbl_logo.png",
+      "description": "Draw and guess words with players from around the world in this hilarious multiplayer drawing game!",
+      "category": "Multiplayer",
+      "status": "Published",
+      "embedCode": "https://skribbl.io/",
+      "playCount": 2200,
+      "dateAdded": "2025-01-25"
+    }
+  ]
+}
