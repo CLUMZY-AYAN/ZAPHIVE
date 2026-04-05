@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZapHive — Loading Game…</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <style>
+    /* Fullscreen: iframe container fills entire screen, no black bars */
+    #iframe-container:fullscreen,
+    #iframe-container:-webkit-full-screen,
+    #iframe-container:-moz-full-screen,
+    #iframe-container:-ms-fullscreen {
+      background: #000;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #iframe-container:fullscreen #game-iframe,
+    #iframe-container:-webkit-full-screen #game-iframe,
+    #iframe-container:-moz-full-screen #game-iframe,
+    #iframe-container:-ms-fullscreen #game-iframe {
+      width: 100vw !important;
+      height: 100vh !important;
+      min-height: unset !important;
+    }
+    /* Hide loading spinner in fullscreen */
+    #iframe-container:fullscreen #iframe-loading,
+    #iframe-container:-webkit-full-screen #iframe-loading {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav id="game-page-nav">
+    <button class="back-btn" id="back-btn">← Back</button>
+    <div class="nav-logo">
+      <span class="lightning">⚡</span>
+      <span class="zap">Zap</span><span class="hive">Hive</span>
+    </div>
+  </nav>
+
+  <!-- GAME META -->
+  <div id="game-meta">
+    <img id="meta-logo" class="meta-logo" src="" alt="" loading="lazy">
+    <div class="meta-info">
+      <h1 id="meta-title">Loading…</h1>
+      <div class="meta-row">
+        <span id="meta-cat" class="meta-cat"></span>
+        <span class="meta-plays">▶ <span id="plays-count">0</span> plays</span>
+      </div>
+      <p id="meta-desc"></p>
+      <div class="meta-votes">
+        <button class="vote-btn like-btn" id="vote-like">👍 <span id="like-count">0</span></button>
+        <button class="vote-btn dislike-btn" id="vote-dislike">👎 <span id="dislike-count">0</span></button>
+      </div>
+      <div class="meta-extras">
+        <button class="meta-extra-btn" id="controls-btn" style="display:none">🎮 Controls</button>
+        <button class="meta-extra-btn" id="patch-btn"    style="display:none">📋 Patch Notes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME TOOLBAR -->
+  <div id="game-toolbar">
+    <button class="toolbar-btn" id="fullscreen-btn">⛶ Fullscreen</button>
+    <div class="volume-wrap">
+      <span class="volume-icon" id="vol-icon">🔊</span>
+      <input type="range" id="volume-slider" min="0" max="100" value="100" title="Volume">
+    </div>
+  </div>
+
+  <!-- IFRAME -->
+  <div id="iframe-container">
+    <div id="iframe-loading">
+      <div class="spinner"></div>
+      <p>Loading game…</p>
+    </div>
+    <iframe id="game-iframe" title="Game"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-top-navigation-by-user-activation"
+      allowfullscreen loading="lazy" src=""></iframe>
+  </div>
+
+  <!-- GAME INFO PANELS -->
+  <div class="game-info-panels" id="info-panels"></div>
+
+  <!-- CONTROLS MODAL -->
+  <div id="controls-modal" class="zh-hidden">
+    <div class="controls-box">
+      <button class="modal-close" id="controls-close">✕</button>
+      <h3>🎮 Controls</h3>
+      <div id="controls-content" class="controls-list"></div>
+    </div>
+  </div>
+
+  <!-- PATCH NOTES MODAL -->
+  <div id="patch-modal" class="zh-hidden">
+    <div class="patch-box">
+      <button class="modal-close" id="patch-close">✕</button>
+      <h3>📋 Patch Notes</h3>
+      <div id="patch-content" class="patch-list"></div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+    const DB_URL = 'https://zaphive-736c0-default-rtdb.firebaseio.com';
+
+    function getParam(n) { return new URLSearchParams(window.location.search).get(n); }
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function fmt(n) { if (n>=1e6) return (n/1e6).toFixed(1)+'M'; if (n>=1000) return (n/1000).toFixed(1)+'K'; return String(n); }
+    function resolveEmbed(c) { if (!c) return null; if (/^https?:\/\//i.test(c)) return c; const m=c.match(/src=["']([^"']+)["']/i); return m?m[1]:null; }
+
+    document.getElementById('back-btn').addEventListener('click', () => { window.location.href = 'index.html'; });
+
+    // ── Fullscreen ──────────────────────────────
+    document.getElementById('fullscreen-btn').addEventListener('click', () => {
+      const container = document.getElementById('iframe-container');
+      const iframe    = document.getElementById('game-iframe');
+
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        // Exit fullscreen
+        (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen).call(document);
+      } else {
+        // Try container first, fall back to iframe
+        const el = container;
+        const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+        if (req) req.call(el).catch(() => {
+          // If container fails, try iframe
+          const req2 = iframe.requestFullscreen || iframe.webkitRequestFullscreen;
+          if (req2) req2.call(iframe).catch(() => {});
+        });
+      }
+    });
+
+    document.addEventListener('fullscreenchange',       updateFSBtn);
+    document.addEventListener('webkitfullscreenchange', updateFSBtn);
+    document.addEventListener('mozfullscreenchange',    updateFSBtn);
+    function updateFSBtn() {
+      const btn = document.getElementById('fullscreen-btn');
+      const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+      btn.textContent = isFS ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+    }
+
+    // ── Volume ──────────────────────────────────
+    const volSlider = document.getElementById('volume-slider');
+    const volIcon   = document.getElementById('vol-icon');
+    const iframe    = document.getElementById('game-iframe');
+
+    volSlider.addEventListener('input', () => {
+      const v = parseInt(volSlider.value);
+      volIcon.textContent = v === 0 ? '🔇' : v < 50 ? '🔉' : '🔊';
+      // Try to set volume on iframe contentWindow if same-origin
+      try {
+        const iframeDoc = iframe.contentWindow;
+        if (iframeDoc) {
+          // Post message to game (games that support it)
+          iframeDoc.postMessage({ type: 'volume', value: v / 100 }, '*');
+        }
+      } catch(e) {}
+    });
+
+    // ── Modals ──────────────────────────────────
+    function showModal(id) { document.getElementById(id).classList.remove('zh-hidden'); }
+    function hideModal(id) { document.getElementById(id).classList.add('zh-hidden'); }
+    document.getElementById('controls-close').addEventListener('click', () => hideModal('controls-modal'));
+    document.getElementById('patch-close').addEventListener('click', () => hideModal('patch-modal'));
+    document.getElementById('controls-modal').addEventListener('click', e => { if (e.target === document.getElementById('controls-modal')) hideModal('controls-modal'); });
+    document.getElementById('patch-modal').addEventListener('click', e => { if (e.target === document.getElementById('patch-modal')) hideModal('patch-modal'); });
+
+    document.getElementById('controls-btn').addEventListener('click', () => showModal('controls-modal'));
+    document.getElementById('patch-btn').addEventListener('click',    () => showModal('patch-modal'));
+
+    // ── Voting ──────────────────────────────────
+    let currentGame = null;
+
+    function getVote(id) { return localStorage.getItem('zh_vote_' + id) || null; }
+
+    async function handleVote(type) {
+      if (!currentGame) return;
+      const id   = currentGame.id;
+      const prev = getVote(id);
+      if (prev === type) return;
+
+      if (prev === 'like')    currentGame.likes    = Math.max(0, (currentGame.likes || 0) - 1);
+      if (prev === 'dislike') currentGame.dislikes = Math.max(0, (currentGame.dislikes || 0) - 1);
+      if (type === 'like')    currentGame.likes    = (currentGame.likes || 0) + 1;
+      if (type === 'dislike') currentGame.dislikes = (currentGame.dislikes || 0) + 1;
+
+      localStorage.setItem('zh_vote_' + id, type);
+
+      document.getElementById('like-count').textContent    = fmt(currentGame.likes    || 0);
+      document.getElementById('dislike-count').textContent = fmt(currentGame.dislikes || 0);
+      document.getElementById('vote-like').classList.toggle('voted',    type === 'like');
+      document.getElementById('vote-dislike').classList.toggle('voted', type === 'dislike');
+
+      try {
+        await fetch(DB_URL+'/games/'+id+'/likes.json',    { method:'PUT', body: JSON.stringify(currentGame.likes    || 0) });
+        await fetch(DB_URL+'/games/'+id+'/dislikes.json', { method:'PUT', body: JSON.stringify(currentGame.dislikes || 0) });
+      } catch(e) {}
+    }
+
+    document.getElementById('vote-like').addEventListener('click',    () => handleVote('like'));
+    document.getElementById('vote-dislike').addEventListener('click', () => handleVote('dislike'));
+
+    // ── Controls renderer ───────────────────────
+    function renderControls(controls) {
+      // controls is a string like "WASD - Move\nSpace - Jump\nE - Interact"
+      const lines = (controls || '').split('\n').filter(l => l.trim());
+      if (!lines.length) return '<p style="color:var(--text-muted);font-size:0.82rem">No controls specified.</p>';
+      return lines.map(line => {
+        const parts = line.split('-');
+        const key   = parts[0] ? parts[0].trim() : '';
+        const action= parts.slice(1).join('-').trim();
+        return `<div class="control-row"><span class="control-key">${esc(key)}</span><span class="control-action">${esc(action)}</span></div>`;
+      }).join('');
+    }
+
+    // ── Patch notes renderer ────────────────────
+    function renderPatches(patches) {
+      if (!patches || !patches.length) return '<p style="color:var(--text-muted);font-size:0.82rem">No patch notes yet.</p>';
+      return patches.map(p => `
+        <div class="patch-item">
+          <span class="patch-version">${esc(p.version || 'v?')}</span>
+          <span class="patch-date">${esc(p.date || '')}</span>
+          <div class="patch-notes">${esc(p.notes || '')}</div>
+        </div>`).join('');
+    }
+
+    // ── Main ────────────────────────────────────
+    async function init() {
+      const id = getParam('id');
+      if (!id) { showError('No game ID provided.'); return; }
+
+      let game;
+      try {
+        const res = await fetch(DB_URL + '/games/' + id + '.json');
+        game = await res.json();
+      } catch (e) { showError('Could not load game data.'); return; }
+
+      if (!game) { showError('Game not found.'); return; }
+      if (game.status !== 'Published') { showError('This game is not yet available.'); return; }
+
+      const embedUrl = resolveEmbed(game.embedCode);
+      if (!embedUrl) { showError('No embed URL configured.'); return; }
+
+      currentGame = game;
+
+      // Meta
+      document.title = 'ZapHive — ' + game.title;
+      const logoEl = document.getElementById('meta-logo');
+      logoEl.src = game.logo || '';
+      logoEl.alt = game.title;
+      logoEl.onerror = function() { this.style.display = 'none'; };
+      document.getElementById('meta-title').textContent = game.title;
+      document.getElementById('meta-cat').textContent   = game.category || '';
+      document.getElementById('meta-desc').textContent  = game.description || '';
+
+      // Votes
+      const myVote = getVote(id);
+      document.getElementById('like-count').textContent    = fmt(game.likes    || 0);
+      document.getElementById('dislike-count').textContent = fmt(game.dislikes || 0);
+      if (myVote === 'like')    document.getElementById('vote-like').classList.add('voted');
+      if (myVote === 'dislike') document.getElementById('vote-dislike').classList.add('voted');
+
+      // Controls button
+      if (game.controls) {
+        document.getElementById('controls-btn').style.display = '';
+        document.getElementById('controls-content').innerHTML = renderControls(game.controls);
+      }
+
+      // Patch notes button
+      if (game.patches && game.patches.length) {
+        document.getElementById('patch-btn').style.display = '';
+        document.getElementById('patch-content').innerHTML = renderPatches(game.patches);
+      }
+
+      // Info panels (description + controls inline)
+      const panels = document.getElementById('info-panels');
+      panels.innerHTML = '';
+
+      if (game.description) {
+        const dp = document.createElement('div');
+        dp.className = 'info-panel';
+        dp.innerHTML = `<h3>About</h3><p>${esc(game.description)}</p>`;
+        panels.appendChild(dp);
+      }
+      if (game.controls) {
+        const cp = document.createElement('div');
+        cp.className = 'info-panel';
+        cp.innerHTML = `<h3>Controls</h3><div class="controls-list">${renderControls(game.controls)}</div>`;
+        panels.appendChild(cp);
+      }
+
+      // Increment play count
+      const newCount = (game.playCount || 0) + 1;
+      document.getElementById('plays-count').textContent = fmt(newCount);
+      fetch(DB_URL + '/games/' + id + '/playCount.json', { method: 'PUT', body: JSON.stringify(newCount) }).catch(() => {});
+
+      // Load iframe
+      const loader = document.getElementById('iframe-loading');
+      iframe.addEventListener('load', () => { loader.style.display = 'none'; });
+      setTimeout(() => { loader.style.display = 'none'; }, 8000);
+      iframe.src = embedUrl;
+    }
+
+    function showError(msg) {
+      document.getElementById('iframe-loading').innerHTML =
+        '<div style="text-align:center;padding:2rem;color:var(--text-muted)">' +
+        '<div style="font-size:3rem;margin-bottom:1rem">⚠️</div>' +
+        '<p>' + esc(msg) + '</p>' +
+        '<a href="index.html" style="margin-top:1rem;display:inline-block;color:var(--accent-blue)">← Back to ZapHive</a>' +
+        '</div>';
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>
