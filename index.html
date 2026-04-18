@@ -15,41 +15,44 @@
       <span class="lightning">⚡</span>
       <span class="zap">Zap</span><span class="hive">Hive</span>
     </div>
-
     <div class="nav-search">
       <span class="search-icon">🔍</span>
       <input type="search" id="search-input" placeholder="Search games…" autocomplete="off" spellcheck="false">
     </div>
-
     <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0">
-
-      <!-- Currency display (logged in users only) -->
-      <div id="nav-currency" style="display:flex;align-items:center;gap:0.5rem;margin-right:0.3rem">
+      <!-- Currency -->
+      <div id="nav-currency" style="display:flex;align-items:center;gap:0.5rem;margin-right:0.2rem">
         <span style="font-size:0.72rem;color:var(--accent-yellow);font-family:var(--font-display);white-space:nowrap">⚡<span id="nav-zap">0</span></span>
         <span style="font-size:0.72rem;color:#00cfff;font-family:var(--font-display);white-space:nowrap">💳<span id="nav-credits">0</span></span>
       </div>
-
-      <!-- Leaderboard -->
-      <button id="nav-lb-btn" title="Leaderboard"
+      <!-- Store -->
+      <button title="Store" onclick="if(window.ZapHiveCosmetics)window.ZapHiveCosmetics.openStore()"
+        style="background:transparent;border:1px solid var(--border);border-radius:20px;color:var(--text-muted);font-size:0.75rem;padding:0.3rem 0.65rem;cursor:pointer;transition:all 0.18s"
+        onmouseenter="this.style.borderColor='#00cfff';this.style.color='#00cfff'"
+        onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">🛒</button>
+      <!-- Season LB -->
+      <button title="Season Leaderboard" onclick="if(window.ZapHiveEvents)window.ZapHiveEvents.openSeasonLeaderboard()"
         style="background:transparent;border:1px solid var(--border);border-radius:20px;color:var(--text-muted);font-size:0.75rem;padding:0.3rem 0.65rem;cursor:pointer;transition:all 0.18s"
         onmouseenter="this.style.borderColor='var(--accent-yellow)';this.style.color='var(--accent-yellow)'"
-        onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'"
-        onclick="openLeaderboard()">🏆</button>
-
-      <!-- Friends (goes to friends.html on mobile, opens panel on desktop) -->
-      <button id="nav-friends-btn" title="Friends"
+        onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">🏅</button>
+      <!-- Leaderboard -->
+      <button id="nav-lb-btn" title="Leaderboard" onclick="openLeaderboard()"
+        style="background:transparent;border:1px solid var(--border);border-radius:20px;color:var(--text-muted);font-size:0.75rem;padding:0.3rem 0.65rem;cursor:pointer;transition:all 0.18s"
+        onmouseenter="this.style.borderColor='var(--accent-yellow)';this.style.color='var(--accent-yellow)'"
+        onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">🏆</button>
+      <!-- Friends -->
+      <button id="nav-friends-btn" title="Friends" onclick="handleFriendsClick()"
         style="background:transparent;border:1px solid var(--border);border-radius:20px;color:var(--text-muted);font-size:0.75rem;padding:0.3rem 0.65rem;cursor:pointer;transition:all 0.18s"
         onmouseenter="this.style.borderColor='var(--accent-cyan)';this.style.color='var(--accent-cyan)'"
-        onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'"
-        onclick="handleFriendsClick()">👥</button>
-
-      <!-- User avatar -->
+        onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">👥</button>
+      <!-- User -->
       <div id="nav-user-wrap" style="display:flex;align-items:center"></div>
     </div>
   </nav>
 
   <div id="cat-bar"><ul id="cat-list"></ul></div>
 
+  <!-- Hero (replaced by event banner if event is active) -->
   <header id="hero">
     <h1>Play <span class="accent-y">Free</span> Browser Games<br><span class="accent-b">No Download. Just Play.</span></h1>
     <p>Action · Puzzle · IO Games · Arcade · Driving · Multiplayer &amp; more</p>
@@ -75,20 +78,16 @@
   </div>
 
   <script src="auth.js"></script>
+  <script src="cosmetics.js"></script>
+  <script src="events.js"></script>
   <script src="friends.js"></script>
   <script src="main.js"></script>
   <script>
-    // Friends button — open page on mobile, panel on desktop
     function handleFriendsClick(){
-      if(window.innerWidth<=768){
-        window.location.href='friends.html';
-      } else {
-        if(window.ZapHiveFriends) window.ZapHiveFriends.openFriends();
-        else window.location.href='friends.html';
-      }
+      if(window.innerWidth<=768){ window.location.href='friends.html'; }
+      else { if(window.ZapHiveFriends) window.ZapHiveFriends.openFriends(); else window.location.href='friends.html'; }
     }
 
-    // Leaderboard
     async function openLeaderboard(){
       const modal=document.getElementById('zh-leaderboard-modal');
       modal.classList.remove('zh-hidden');
@@ -119,7 +118,7 @@
             <div style="width:36px;height:36px;border-radius:50%;border:2.5px solid ${ringColor};display:flex;align-items:center;justify-content:center;background:var(--bg-section);overflow:hidden;flex-shrink:0">${avatarInner}</div>
             <div style="flex:1;min-width:0">
               <div style="font-size:0.82rem;font-weight:700;color:${isMe?'var(--accent-cyan)':'var(--text-white)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.username||'?'}${isMe?' (You)':''}</div>
-              <div style="font-size:0.68rem;color:var(--text-muted)">Level ${u.level||1}${roleMeta&&roleMeta.label?` · ${roleMeta.label}`:''}</div>
+              <div style="font-size:0.68rem;color:var(--text-muted)">Level ${u.level||1}${roleMeta&&roleMeta.label?' · '+roleMeta.label:''}</div>
             </div>
             <div style="text-align:right;flex-shrink:0">
               <div style="font-family:var(--font-display);font-size:0.82rem;color:var(--accent-yellow)">⚡${u.zap||0}</div>

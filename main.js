@@ -16,6 +16,7 @@
   const searchInput = document.getElementById('search-input');
 
   async function init() {
+    await loadCategories();
     try {
       const res  = await fetch(DB_URL + '/games.json');
       const data = await res.json();
@@ -67,10 +68,32 @@
   }
 
   // ── Categories ────────────────────────────────
+  let dynamicCategories = {}; // loaded from Firebase
+
+  async function loadCategories() {
+    try {
+      const res = await fetch(DB_URL + '/categories.json');
+      const data = await res.json();
+      dynamicCategories = (data && typeof data === 'object') ? data : {};
+    } catch(e) { dynamicCategories = {}; }
+  }
+
   function getPublished(){ return allGames.filter(g=>g.status==='Published'); }
 
   function getUniqueCategories(){
+    // Use dynamic categories if available, fall back to game data
+    const fromDB = Object.values(dynamicCategories).map(c=>c.name).filter(Boolean);
+    if (fromDB.length) {
+      // Only show categories that have at least one game
+      const usedCats = new Set(getPublished().map(g=>g.category).filter(Boolean));
+      return fromDB.filter(n => usedCats.has(n));
+    }
     const set=new Set(); getPublished().forEach(g=>{ if(g.category) set.add(g.category); }); return [...set].sort();
+  }
+
+  function getCategoryIcon(catName) {
+    const found = Object.values(dynamicCategories).find(c => c.name === catName);
+    return found?.icon || '';
   }
 
   function buildCategoryBar(){
@@ -130,7 +153,8 @@
     const section=document.createElement('section');
     const header=document.createElement('div');
     header.className='section-header';
-    header.innerHTML=`<h2>${esc(catName)} <span class="count">${games.length} game${games.length!==1?'s':''}</span></h2>`;
+    const catIcon = getCategoryIcon(catName);
+    header.innerHTML=`<h2>${catIcon?catIcon+' ':''}${esc(catName)} <span class="count">${games.length} game${games.length!==1?'s':''}</span></h2>`;
     section.appendChild(header);
     const grid=document.createElement('div');
     grid.className='game-grid';
