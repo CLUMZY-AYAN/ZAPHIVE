@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZapHive — Loading Game…</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <style>
+    #iframe-container:fullscreen,#iframe-container:-webkit-full-screen,#iframe-container:-moz-full-screen,#iframe-container:-ms-fullscreen{background:#000;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;}
+    #iframe-container:fullscreen #game-iframe,#iframe-container:-webkit-full-screen #game-iframe,#iframe-container:-moz-full-screen #game-iframe,#iframe-container:-ms-fullscreen #game-iframe{width:100vw!important;height:100vh!important;min-height:unset!important;}
+    #iframe-container:fullscreen #iframe-loading,#iframe-container:-webkit-full-screen #iframe-loading{display:none!important;}
+    .dna-bar-wrap{margin-bottom:0.6rem}
+    .dna-bar-label{display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-muted);margin-bottom:0.25rem}
+    .dna-bar-track{background:rgba(26,140,255,0.12);border-radius:20px;height:7px;overflow:hidden}
+    .dna-bar-fill{height:100%;border-radius:20px;transition:width 0.6s ease}
+  </style>
+</head>
+<body>
+
+  <nav id="game-page-nav">
+    <button class="back-btn" id="back-btn">← Back</button>
+    <div class="nav-logo"><span class="lightning">⚡</span><span class="zap">Zap</span><span class="hive">Hive</span></div>
+    <div id="nav-user-wrap" style="display:flex;align-items:center;margin-left:auto"></div>
+  </nav>
+
+  <div id="game-meta">
+    <img id="meta-logo" class="meta-logo" src="" alt="" loading="lazy">
+    <div class="meta-info">
+      <h1 id="meta-title">Loading…</h1>
+      <div class="meta-row">
+        <span id="meta-cat" class="meta-cat"></span>
+        <span class="meta-plays">▶ <span id="plays-count">0</span> plays</span>
+      </div>
+      <p id="meta-desc"></p>
+      <div class="meta-votes" style="display:flex;gap:0.6rem;align-items:center;margin-top:0.5rem;flex-wrap:wrap">
+        <button class="vote-btn like-btn" id="vote-like">👍 <span id="like-count">0</span></button>
+        <button class="vote-btn dislike-btn" id="vote-dislike">👎 <span id="dislike-count">0</span></button>
+        <button id="fav-game-btn" style="background:transparent;border:1px solid var(--border);border-radius:20px;color:var(--text-muted);font-size:0.8rem;padding:0.3rem 0.8rem;cursor:pointer;transition:all 0.18s">☆ Favorite</button>
+      </div>
+      <div class="meta-extras" style="margin-top:0.6rem;display:flex;gap:0.6rem;flex-wrap:wrap">
+        <button class="meta-extra-btn" id="controls-btn" style="display:none">🎮 Controls</button>
+        <button class="meta-extra-btn" id="patch-btn"    style="display:none">📋 Patch Notes</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="game-toolbar">
+    <button class="toolbar-btn" id="fullscreen-btn">⛶ Fullscreen</button>
+    <div class="volume-wrap">
+      <span class="volume-icon" id="vol-icon">🔊</span>
+      <input type="range" id="volume-slider" min="0" max="100" value="100" title="Volume">
+    </div>
+  </div>
+
+  <div id="iframe-container">
+    <div id="iframe-loading"><div class="spinner"></div><p>Loading game…</p></div>
+    <iframe id="game-iframe" title="Game"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-top-navigation-by-user-activation"
+      allowfullscreen loading="lazy" src=""></iframe>
+  </div>
+
+  <div class="game-info-panels" id="info-panels"></div>
+
+  <!-- Controls modal -->
+  <div id="controls-modal" class="zh-hidden" style="position:fixed;inset:0;background:rgba(5,13,26,0.88);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem">
+    <div class="controls-box"><button class="modal-close" id="controls-close">✕</button><h3>🎮 Controls</h3><div id="controls-content" class="controls-list"></div></div>
+  </div>
+
+  <!-- Patch notes modal -->
+  <div id="patch-modal" class="zh-hidden" style="position:fixed;inset:0;background:rgba(5,13,26,0.88);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem">
+    <div class="patch-box"><button class="modal-close" id="patch-close">✕</button><h3>📋 Patch Notes</h3><div id="patch-content" class="patch-list"></div></div>
+  </div>
+
+  <script src="auth.js"></script>
+  <script>
+  (function(){
+    'use strict';
+    const DB_URL='https://zaphive-736c0-default-rtdb.firebaseio.com';
+    function getParam(n){return new URLSearchParams(window.location.search).get(n);}
+    function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+    function fmt(n){if(n>=1e6)return (n/1e6).toFixed(1)+'M';if(n>=1000)return (n/1000).toFixed(1)+'K';return String(n);}
+    function resolveEmbed(c){if(!c)return null;if(/^https?:\/\//i.test(c))return c;const m=c.match(/src=["']([^"']+)["']/i);return m?m[1]:null;}
+
+    document.getElementById('back-btn').addEventListener('click',()=>{window.location.href='index.html';});
+
+    // Fullscreen
+    document.getElementById('fullscreen-btn').addEventListener('click',()=>{
+      const container=document.getElementById('iframe-container');
+      if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen).call(document);}
+      else{const req=container.requestFullscreen||container.webkitRequestFullscreen||container.mozRequestFullScreen;if(req)req.call(container).catch(()=>{});}
+    });
+    function updateFSBtn(){const btn=document.getElementById('fullscreen-btn');const isFS=!!(document.fullscreenElement||document.webkitFullscreenElement);btn.textContent=isFS?'✕ Exit Fullscreen':'⛶ Fullscreen';}
+    document.addEventListener('fullscreenchange',updateFSBtn);
+    document.addEventListener('webkitfullscreenchange',updateFSBtn);
+
+    // Volume
+    const volSlider=document.getElementById('volume-slider');
+    const volIcon=document.getElementById('vol-icon');
+    volSlider.addEventListener('input',()=>{const v=parseInt(volSlider.value);volIcon.textContent=v===0?'🔇':v<50?'🔉':'🔊';try{document.getElementById('game-iframe').contentWindow.postMessage({type:'volume',value:v/100},'*');}catch(e){}});
+
+    // Modals
+    function showModal(id){document.getElementById(id).classList.remove('zh-hidden');}
+    function hideModal(id){document.getElementById(id).classList.add('zh-hidden');}
+    document.getElementById('controls-close').addEventListener('click',()=>hideModal('controls-modal'));
+    document.getElementById('patch-close').addEventListener('click',()=>hideModal('patch-modal'));
+    document.getElementById('controls-modal').addEventListener('click',e=>{if(e.target===document.getElementById('controls-modal'))hideModal('controls-modal');});
+    document.getElementById('patch-modal').addEventListener('click',e=>{if(e.target===document.getElementById('patch-modal'))hideModal('patch-modal');});
+    document.getElementById('controls-btn').addEventListener('click',()=>showModal('controls-modal'));
+    document.getElementById('patch-btn').addEventListener('click',()=>showModal('patch-modal'));
+
+    // Voting
+    let currentGame=null;
+    function getVote(id){return localStorage.getItem('zh_vote_'+id)||null;}
+
+    async function handleVote(type){
+      if(!currentGame) return;
+      const auth=window.ZapHiveAuth;
+      if(!auth||auth.isGuest()){showGuestBlock('vote on games');return;}
+      const id=currentGame.id, prev=getVote(id);
+      if(prev===type) return;
+      if(prev==='like')    currentGame.likes    =Math.max(0,(currentGame.likes||0)-1);
+      if(prev==='dislike') currentGame.dislikes =Math.max(0,(currentGame.dislikes||0)-1);
+      if(type==='like')    currentGame.likes    =(currentGame.likes||0)+1;
+      if(type==='dislike') currentGame.dislikes =(currentGame.dislikes||0)+1;
+      localStorage.setItem('zh_vote_'+id,type);
+      document.getElementById('like-count').textContent=fmt(currentGame.likes||0);
+      document.getElementById('dislike-count').textContent=fmt(currentGame.dislikes||0);
+      document.getElementById('vote-like').classList.toggle('voted',type==='like');
+      document.getElementById('vote-dislike').classList.toggle('voted',type==='dislike');
+      if(type==='like'&&auth) auth.onLike(id);
+      try{
+        await fetch(DB_URL+'/games/'+id+'/likes.json',   {method:'PUT',body:JSON.stringify(currentGame.likes||0)});
+        await fetch(DB_URL+'/games/'+id+'/dislikes.json',{method:'PUT',body:JSON.stringify(currentGame.dislikes||0)});
+      }catch(e){}
+    }
+
+    document.getElementById('vote-like').addEventListener('click',()=>handleVote('like'));
+    document.getElementById('vote-dislike').addEventListener('click',()=>handleVote('dislike'));
+
+    // Favorite
+    document.getElementById('fav-game-btn').addEventListener('click',async()=>{
+      const auth=window.ZapHiveAuth;
+      if(!auth||auth.isGuest()){showGuestBlock('save favorites');return;}
+      if(!currentGame) return;
+      const nowFav=await auth.toggleFavorite(currentGame.id);
+      const btn=document.getElementById('fav-game-btn');
+      btn.textContent=nowFav?'⭐ Favorited':'☆ Favorite';
+      btn.style.borderColor=nowFav?'var(--accent-yellow)':'var(--border)';
+      btn.style.color=nowFav?'var(--accent-yellow)':'var(--text-muted)';
+    });
+
+    function showGuestBlock(action){
+      let t=document.getElementById('zh-guest-block');
+      if(!t){t=document.createElement('div');t.id='zh-guest-block';t.style.cssText='position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--accent-yellow);border-radius:10px;padding:0.7rem 1.2rem;color:var(--text-white);font-size:0.82rem;z-index:700;transition:opacity 0.3s;text-align:center';document.body.appendChild(t);}
+      t.innerHTML=`🔒 Sign in to ${action} <span style="color:var(--accent-blue);cursor:pointer" onclick="if(window.ZapHiveAuth)window.ZapHiveAuth.openAuth()">Sign Up</span>`;
+      t.style.opacity='1';clearTimeout(t._timer);t._timer=setTimeout(()=>{t.style.opacity='0';},3000);
+    }
+
+    // Controls renderer
+    function renderControls(controls){
+      const lines=(controls||'').split('\n').filter(l=>l.trim());
+      if(!lines.length) return '<p style="color:var(--text-muted);font-size:0.82rem">No controls specified.</p>';
+      return lines.map(line=>{const parts=line.split('-');const key=parts[0]?parts[0].trim():'';const action=parts.slice(1).join('-').trim();return `<div class="control-row"><span class="control-key">${esc(key)}</span><span class="control-action">${esc(action)}</span></div>`;}).join('');
+    }
+
+    // Patch notes renderer
+    function renderPatches(patches){
+      if(!patches||!patches.length) return '<p style="color:var(--text-muted);font-size:0.82rem">No patch notes yet.</p>';
+      return patches.map(p=>`<div class="patch-item"><span class="patch-version">${esc(p.version||'v?')}</span><span class="patch-date">${esc(p.date||'')}</span><div class="patch-notes">${esc(p.notes||'')}</div></div>`).join('');
+    }
+
+    // Game DNA bars
+    function renderDNA(dna){
+      if(!dna||Object.keys(dna).length===0) return '';
+      const stats=[
+        {key:'speed',    label:'Speed',    color:'#ff4d00'},
+        {key:'strategy', label:'Strategy', color:'#1a8cff'},
+        {key:'skill',    label:'Skill',    color:'#e91e8c'},
+        {key:'fun',      label:'Fun',      color:'#00c853'}
+      ];
+      const bars=stats.filter(s=>dna[s.key]!=null).map(s=>`
+        <div class="dna-bar-wrap">
+          <div class="dna-bar-label"><span>${s.label}</span><span style="color:${s.color};font-weight:700">${dna[s.key]}/100</span></div>
+          <div class="dna-bar-track"><div class="dna-bar-fill" style="width:${dna[s.key]}%;background:${s.color}"></div></div>
+        </div>`).join('');
+      return bars ? `<div class="info-panel"><h3>🧬 Game DNA</h3>${bars}</div>` : '';
+    }
+
+    async function init(){
+      const id=getParam('id');
+      if(!id){showError('No game ID provided.');return;}
+      let game;
+      try{const res=await fetch(DB_URL+'/games/'+id+'.json');game=await res.json();}catch(e){showError('Could not load game data.');return;}
+      if(!game){showError('Game not found.');return;}
+      if(game.status!=='Published'){showError('This game is not yet available.');return;}
+      const embedUrl=resolveEmbed(game.embedCode);
+      if(!embedUrl){showError('No embed URL configured.');return;}
+
+      currentGame=game;
+      document.title='ZapHive — '+game.title;
+      const logoEl=document.getElementById('meta-logo');
+      logoEl.src=game.logo||''; logoEl.alt=game.title;
+      logoEl.onerror=function(){this.style.display='none';};
+      document.getElementById('meta-title').textContent=game.title;
+      document.getElementById('meta-cat').textContent=game.category||'';
+      document.getElementById('meta-desc').textContent=game.description||'';
+
+      // Votes
+      const myVote=getVote(id);
+      document.getElementById('like-count').textContent=fmt(game.likes||0);
+      document.getElementById('dislike-count').textContent=fmt(game.dislikes||0);
+      if(myVote==='like')    document.getElementById('vote-like').classList.add('voted');
+      if(myVote==='dislike') document.getElementById('vote-dislike').classList.add('voted');
+
+      // Favorite state
+      const auth=window.ZapHiveAuth;
+      const favBtn=document.getElementById('fav-game-btn');
+      if(auth&&auth.isFavorite(id)){favBtn.textContent='⭐ Favorited';favBtn.style.borderColor='var(--accent-yellow)';favBtn.style.color='var(--accent-yellow)';}
+
+      // Controls / Patch buttons
+      if(game.controls){document.getElementById('controls-btn').style.display='';document.getElementById('controls-content').innerHTML=renderControls(game.controls);}
+      if(game.patches&&game.patches.length){document.getElementById('patch-btn').style.display='';document.getElementById('patch-content').innerHTML=renderPatches(game.patches);}
+
+      // Info panels
+      const panels=document.getElementById('info-panels');
+      panels.innerHTML='';
+      if(game.description){const dp=document.createElement('div');dp.className='info-panel';dp.innerHTML=`<h3>About</h3><p>${esc(game.description)}</p>`;panels.appendChild(dp);}
+      // Game DNA
+      if(game.dna){panels.innerHTML+=renderDNA(game.dna);}
+      if(game.controls){const cp=document.createElement('div');cp.className='info-panel';cp.innerHTML=`<h3>Controls</h3><div class="controls-list">${renderControls(game.controls)}</div>`;panels.appendChild(cp);}
+
+      // Play count
+      const newCount=(game.playCount||0)+1;
+      document.getElementById('plays-count').textContent=fmt(newCount);
+      fetch(DB_URL+'/games/'+id+'/playCount.json',{method:'PUT',body:JSON.stringify(newCount)}).catch(()=>{});
+
+      // Auth hooks
+      if(auth) auth.onPlayGame(id,game.title);
+      if(window.ZapHiveFriends) window.ZapHiveFriends.setPlayingGame(id,game.title);
+
+      // Load iframe
+      const iframe=document.getElementById('game-iframe');
+      const loader=document.getElementById('iframe-loading');
+      iframe.addEventListener('load',()=>{loader.style.display='none';});
+      setTimeout(()=>{loader.style.display='none';},8000);
+      iframe.src=embedUrl;
+    }
+
+    function showError(msg){
+      document.getElementById('iframe-loading').innerHTML='<div style="text-align:center;padding:2rem;color:var(--text-muted)"><div style="font-size:3rem;margin-bottom:1rem">⚠️</div><p>'+esc(msg)+'</p><a href="index.html" style="margin-top:1rem;display:inline-block;color:var(--accent-blue)">← Back to ZapHive</a></div>';
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>

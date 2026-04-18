@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZapHive — Friends</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <style>
+    body { background: var(--bg-primary); }
+    #friends-page { max-width: 600px; margin: 0 auto; padding: 0; min-height: 100vh; display: flex; flex-direction: column; }
+    .fp-nav { background: var(--bg-nav); border-bottom: 1px solid var(--border); padding: 0 1rem; height: 52px; display: flex; align-items: center; gap: 1rem; }
+    .fp-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg-nav); flex-shrink: 0; }
+    .fp-tab { flex: 1; padding: 0.7rem; font-size: 0.75rem; font-weight: 700; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.18s; }
+    .fp-tab.active { border-bottom-color: var(--accent-blue); color: var(--accent-blue); }
+    .fp-body { flex: 1; padding: 1rem; overflow-y: auto; }
+    .friend-item { display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem; border-radius: 10px; margin-bottom: 0.5rem; background: var(--bg-card); border: 1px solid var(--border); }
+    .friend-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+    .fa-btn { background: transparent; border: 1px solid var(--border); border-radius: 6px; font-size: 0.75rem; padding: 0.3rem 0.6rem; cursor: pointer; transition: all 0.18s; }
+    .fa-btn.chat  { color: var(--accent-blue);  border-color: rgba(26,140,255,0.3); }
+    .fa-btn.block { color: #ff4d6d;              border-color: rgba(255,77,109,0.3); }
+    .fa-btn.add   { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+    .fa-btn.accept{ background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+    .fa-btn.decline{ color: #ff4d6d; border-color: rgba(255,77,109,0.3); }
+    .search-box { width: 100%; background: rgba(26,140,255,0.07); border: 1px solid var(--border); border-radius: 20px; padding: 0.55rem 1rem; color: var(--text-white); font-size: 0.88rem; margin-bottom: 1rem; outline: none; font-family: var(--font-body); }
+    .search-box:focus { border-color: var(--accent-blue); }
+    .req-badge { background: #ff4d6d; color: #fff; border-radius: 20px; padding: 0.05rem 0.4rem; font-size: 0.65rem; margin-left: 0.3rem; display: none; }
+    /* Chat area */
+    #chat-area { flex: 1; display: flex; flex-direction: column; height: calc(100vh - 52px); }
+    #chat-header { background: var(--bg-nav); border-bottom: 1px solid var(--border); padding: 0.7rem 1rem; display: flex; align-items: center; gap: 0.7rem; flex-shrink: 0; }
+    #chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    #chat-input-row { padding: 0.7rem 1rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; flex-shrink: 0; background: var(--bg-nav); }
+    #chat-input-field { flex: 1; background: rgba(26,140,255,0.07); border: 1px solid var(--border); border-radius: 20px; padding: 0.45rem 0.9rem; color: var(--text-white); font-size: 0.85rem; outline: none; font-family: var(--font-body); }
+    #chat-input-field:focus { border-color: var(--accent-blue); }
+    #chat-send-btn { background: var(--accent-blue); border: none; border-radius: 20px; color: #fff; padding: 0.45rem 1.1rem; font-size: 0.8rem; font-weight: 700; cursor: pointer; font-family: var(--font-display); }
+    .msg-bubble { display: flex; flex-direction: column; }
+    .msg-text { max-width: 80%; border-radius: 12px; padding: 0.5rem 0.8rem; font-size: 0.85rem; color: #fff; word-break: break-word; }
+    .msg-me   .msg-text { background: var(--accent-blue); align-self: flex-end; border-radius: 12px 12px 2px 12px; }
+    .msg-them .msg-text { background: var(--bg-section); border: 1px solid var(--border); align-self: flex-start; border-radius: 12px 12px 12px 2px; }
+    .msg-time { font-size: 0.62rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .msg-me   { align-items: flex-end; }
+    .msg-them { align-items: flex-start; }
+    /* Online status ring */
+    .status-ring { border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.1rem; }
+    .empty-msg { text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 0.9rem; }
+    .empty-msg .icon { font-size: 3rem; margin-bottom: 0.8rem; }
+  </style>
+</head>
+<body>
+<div id="friends-page">
+
+  <!-- Top nav -->
+  <div class="fp-nav">
+    <button onclick="window.location.href='index.html'" style="background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text-muted);padding:0.3rem 0.8rem;font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:0.3rem">← Back</button>
+    <span style="font-family:var(--font-display);font-size:0.9rem;font-weight:900"><span style="color:var(--accent-yellow)">⚡Zap</span><span style="color:var(--accent-cyan)">Hive</span></span>
+    <span style="font-family:var(--font-display);font-size:0.75rem;color:var(--accent-cyan);letter-spacing:1px">FRIENDS</span>
+  </div>
+
+  <!-- Friends content (shown when not in chat) -->
+  <div id="friends-content" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <!-- Tabs -->
+    <div class="fp-tabs">
+      <button class="fp-tab active" data-tab="friends" onclick="switchTab('friends')">Friends</button>
+      <button class="fp-tab" data-tab="requests" onclick="switchTab('requests')">Requests <span class="req-badge" id="req-badge">0</span></button>
+      <button class="fp-tab" data-tab="search" onclick="switchTab('search')">Search</button>
+    </div>
+    <div class="fp-body" id="fp-body"></div>
+  </div>
+
+  <!-- Chat view (hidden by default) -->
+  <div id="chat-area" style="display:none">
+    <div id="chat-header">
+      <button onclick="closeChat()" style="background:transparent;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;padding:0.2rem 0.5rem">←</button>
+      <div id="chat-header-info" style="flex:1;font-size:0.88rem;font-weight:700;color:var(--text-white)"></div>
+    </div>
+    <div id="chat-messages"></div>
+    <div id="chat-input-row">
+      <input type="text" id="chat-input-field" placeholder="Message…" maxlength="200" onkeydown="if(event.key==='Enter')sendMessage()">
+      <button id="chat-send-btn" onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="auth.js"></script>
+<script>
+(function(){
+  'use strict';
+  const DB_URL='https://zaphive-736c0-default-rtdb.firebaseio.com';
+  let activeChatUid=null, activeChatName='', chatPoll=null;
+  let currentTab='friends';
+
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function now(){return Date.now();}
+  async function dbGet(p){try{const r=await fetch(DB_URL+p+'.json');return await r.json();}catch(e){return null;}}
+  async function dbSet(p,d){try{await fetch(DB_URL+p+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});}catch(e){}}
+  async function dbDelete(p){try{await fetch(DB_URL+p+'.json',{method:'DELETE'});}catch(e){}}
+
+  function getUser(){return window.ZapHiveAuth?window.ZapHiveAuth.getCurrentUser():null;}
+
+  function statusColor(s){return s==='playing'?'#1a8cff':s==='online'?'#00c853':'#555';}
+  function statusLabel(s){return s==='playing'?'🎮 Playing':s==='online'?'🟢 Online':'⚫ Offline';}
+  function isOnline(ls){return ls&&(now()-ls)<65000;}
+
+  function avatarDiv(avatar,avatarType,size,status){
+    const ring=statusColor(status);
+    const inner=avatarType==='image'?`<img src="${esc(avatar)}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:50%">`:
+      `<span style="font-size:${Math.floor(size*0.6)}px;line-height:1">${avatar||'👾'}</span>`;
+    return `<div class="status-ring" style="width:${size}px;height:${size}px;border:2.5px solid ${ring};background:var(--bg-section)">${inner}</div>`;
+  }
+
+  // ── Tab switching ──────────────────────────────
+  window.switchTab=function(tab){
+    currentTab=tab;
+    document.querySelectorAll('.fp-tab').forEach(b=>{b.classList.remove('active');});
+    document.querySelector(`.fp-tab[data-tab="${tab}"]`)?.classList.add('active');
+    loadTab(tab);
+  };
+
+  async function loadTab(tab){
+    const body=document.getElementById('fp-body');
+    const user=getUser();
+    if(!user||user.isGuest){
+      body.innerHTML=`<div class="empty-msg"><div class="icon">🔒</div><p>Sign in to use Friends!</p><button onclick="if(window.ZapHiveAuth)window.ZapHiveAuth.openAuth()" style="margin-top:1rem;background:var(--accent-blue);color:#fff;border:none;border-radius:6px;padding:0.5rem 1.2rem;font-family:var(--font-display);font-size:0.8rem;font-weight:700;cursor:pointer">Sign Up / Login</button></div>`;
+      return;
+    }
+
+    if(tab==='friends'){
+      body.innerHTML='<div style="color:var(--text-muted);text-align:center;padding:1rem;font-size:0.82rem">Loading…</div>';
+      const fd=await dbGet('/friends/'+user.uid);
+      const friends=fd?Object.values(fd).filter(f=>f.status==='accepted'):[];
+      if(!friends.length){body.innerHTML='<div class="empty-msg"><div class="icon">👥</div><p>No friends yet.<br>Search for players to add!</p></div>';return;}
+      body.innerHTML='';
+      for(const f of friends){
+        const pr=await dbGet('/presence/'+f.uid);
+        const online=pr&&isOnline(pr.lastSeen);
+        const status=online?(pr.status||'online'):'offline';
+        const div=document.createElement('div');div.className='friend-item';
+        div.innerHTML=`
+          ${avatarDiv(f.avatar||'👾',f.avatarType||'preset',44,status)}
+          <div style="flex:1;min-width:0">
+            <div style="font-size:0.88rem;font-weight:700;color:var(--text-white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.username)}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted)">${statusLabel(status)}${status==='playing'&&pr?.gameTitle?' · '+esc(pr.gameTitle):''}</div>
+          </div>
+          <div class="friend-actions">
+            <button class="fa-btn chat" onclick="openChat('${f.uid}','${esc(f.username)}','${esc(f.avatar||'👾')}','${f.avatarType||'preset'}')">💬</button>
+            <button class="fa-btn block" onclick="blockUser('${f.uid}','${esc(f.username)}')">🚫</button>
+          </div>`;
+        body.appendChild(div);
+      }
+      checkBadge();
+
+    } else if(tab==='requests'){
+      body.innerHTML='<div style="color:var(--text-muted);text-align:center;padding:1rem;font-size:0.82rem">Loading…</div>';
+      const inc=await dbGet('/friendRequests/'+user.uid+'/incoming');
+      const reqs=inc?Object.values(inc):[];
+      if(!reqs.length){body.innerHTML='<div class="empty-msg"><div class="icon">📬</div><p>No pending requests.</p></div>';return;}
+      body.innerHTML='';
+      reqs.forEach(req=>{
+        const div=document.createElement('div');div.className='friend-item';div.id='req-'+req.fromUid;
+        div.innerHTML=`
+          ${avatarDiv(req.avatar||'👾',req.avatarType||'preset',44,'offline')}
+          <div style="flex:1;min-width:0">
+            <div style="font-size:0.88rem;font-weight:700;color:var(--text-white)">${esc(req.username)}</div>
+            <div style="font-size:0.72rem;color:var(--text-muted)">Friend request</div>
+          </div>
+          <div class="friend-actions">
+            <button class="fa-btn accept" onclick="acceptRequest('${req.fromUid}','${esc(req.username)}','${esc(req.avatar||'👾')}','${req.avatarType||'preset'}')">✓</button>
+            <button class="fa-btn decline" onclick="declineRequest('${req.fromUid}')">✗</button>
+          </div>`;
+        body.appendChild(div);
+      });
+
+    } else if(tab==='search'){
+      body.innerHTML=`<input type="text" class="search-box" placeholder="Search username…" maxlength="13" oninput="searchPlayers(this.value)" autofocus><div id="search-results"></div>`;
+    }
+  }
+
+  async function checkBadge(){
+    const user=getUser(); if(!user) return;
+    const inc=await dbGet('/friendRequests/'+user.uid+'/incoming');
+    const count=inc?Object.keys(inc).length:0;
+    const badge=document.getElementById('req-badge');
+    if(badge){badge.textContent=count;badge.style.display=count>0?'inline':'none';}
+  }
+
+  // ── Search ────────────────────────────────────
+  window.searchPlayers=async function(q){
+    const results=document.getElementById('search-results');
+    if(!results||q.trim().length<2){if(results)results.innerHTML='';return;}
+    results.innerHTML='<div style="color:var(--text-muted);font-size:0.82rem;text-align:center;padding:0.8rem">Searching…</div>';
+    const user=getUser(); if(!user) return;
+    const uns=await dbGet('/usernames'); if(!uns){results.innerHTML='<div style="color:var(--text-muted);font-size:0.82rem;text-align:center">No results.</div>';return;}
+    const matches=Object.entries(uns).filter(([n])=>n.includes(q.toLowerCase())&&n!==user.username.toLowerCase()).slice(0,8);
+    if(!matches.length){results.innerHTML='<div style="color:var(--text-muted);font-size:0.82rem;text-align:center;padding:0.8rem">No players found.</div>';return;}
+    results.innerHTML='';
+    for(const[,uid] of matches){
+      const p=await dbGet('/users/'+uid); if(!p) continue;
+      const existing=await dbGet('/friends/'+user.uid+'/'+uid);
+      const sent=await dbGet('/friendRequests/'+uid+'/incoming/'+user.uid);
+      const blocked=await dbGet('/blocked/'+user.uid+'/'+uid);
+      let actionBtn='';
+      if(blocked) actionBtn=`<button class="fa-btn" onclick="unblock('${uid}','${esc(p.username)}')" style="color:var(--text-muted)">Unblock</button>`;
+      else if(existing&&existing.status==='accepted') actionBtn=`<span style="font-size:0.75rem;color:#00c853;padding:0.3rem 0.6rem">✓ Friends</span>`;
+      else if(sent) actionBtn=`<span style="font-size:0.75rem;color:var(--text-muted);padding:0.3rem 0.6rem">Sent</span>`;
+      else actionBtn=`<button class="fa-btn add" onclick="sendRequest('${uid}','${esc(p.username)}','${esc(p.avatar||'👾')}','${p.avatarType||'preset'}',this)">+ Add</button>`;
+      const div=document.createElement('div');div.className='friend-item';
+      div.innerHTML=`${avatarDiv(p.avatar||'👾',p.avatarType||'preset',44,'offline')}<div style="flex:1;min-width:0"><div style="font-size:0.88rem;font-weight:700;color:var(--text-white)">${esc(p.username)}</div><div style="font-size:0.72rem;color:var(--text-muted)">Level ${p.level||1} · ${p.zap||0} ZAP</div></div><div class="friend-actions">${actionBtn}</div>`;
+      results.appendChild(div);
+    }
+  };
+
+  window.sendRequest=async function(toUid,toUsername,toAvatar,toAvatarType,btn){
+    const user=getUser(); if(!user) return;
+    btn.textContent='…';btn.disabled=true;
+    await dbSet('/friendRequests/'+toUid+'/incoming/'+user.uid,{fromUid:user.uid,username:user.username,avatar:user.avatar||'👾',avatarType:user.avatarType||'preset',sentAt:now()});
+    await dbSet('/friends/'+user.uid+'/'+toUid,{uid:toUid,username:toUsername,avatar:toAvatar,avatarType:toAvatarType,status:'pending'});
+    btn.textContent='Sent';
+    showToast('Request sent to '+toUsername+'!');
+  };
+
+  window.acceptRequest=async function(fromUid,fromUsername,fromAvatar,fromAvatarType){
+    const user=getUser(); if(!user) return;
+    await dbSet('/friends/'+user.uid+'/'+fromUid,{uid:fromUid,username:fromUsername,avatar:fromAvatar,avatarType:fromAvatarType,status:'accepted'});
+    await dbSet('/friends/'+fromUid+'/'+user.uid,{uid:user.uid,username:user.username,avatar:user.avatar||'👾',avatarType:user.avatarType||'preset',status:'accepted'});
+    await dbDelete('/friendRequests/'+user.uid+'/incoming/'+fromUid);
+    document.getElementById('req-'+fromUid)?.remove();
+    showToast('You and '+fromUsername+' are now friends! 🎉');
+    checkBadge();
+  };
+
+  window.declineRequest=async function(fromUid){
+    const user=getUser(); if(!user) return;
+    await dbDelete('/friendRequests/'+user.uid+'/incoming/'+fromUid);
+    document.getElementById('req-'+fromUid)?.remove();
+  };
+
+  window.blockUser=async function(targetUid,targetUsername){
+    const user=getUser(); if(!user) return;
+    if(!confirm('Block '+targetUsername+'?')) return;
+    await dbSet('/blocked/'+user.uid+'/'+targetUid,{uid:targetUid,username:targetUsername});
+    await dbDelete('/friends/'+user.uid+'/'+targetUid);
+    await dbDelete('/friends/'+targetUid+'/'+user.uid);
+    showToast(targetUsername+' blocked.');
+    loadTab('friends');
+  };
+
+  window.unblock=async function(targetUid,targetUsername){
+    const user=getUser(); if(!user) return;
+    await dbDelete('/blocked/'+user.uid+'/'+targetUid);
+    showToast(targetUsername+' unblocked.');
+    window.searchPlayers(document.querySelector('.search-box')?.value||'');
+  };
+
+  // ── Chat ──────────────────────────────────────
+  window.openChat=function(friendUid,friendUsername,friendAvatar,friendAvatarType){
+    activeChatUid=friendUid; activeChatName=friendUsername;
+    document.getElementById('friends-content').style.display='none';
+    const chatArea=document.getElementById('chat-area');chatArea.style.display='flex';
+    document.getElementById('chat-header-info').innerHTML=`${avatarDiv(friendAvatar,friendAvatarType,32,'online')}<span style="margin-left:0.5rem">${esc(friendUsername)}</span>`;
+    loadMessages();
+    clearInterval(chatPoll);chatPoll=setInterval(loadMessages,4000);
+    document.getElementById('chat-input-field')?.focus();
+  };
+
+  function chatKey(a,b){return [a,b].sort().join('_');}
+
+  async function loadMessages(){
+    const user=getUser(); if(!user||!activeChatUid) return;
+    const key=chatKey(user.uid,activeChatUid);
+    const msgs=await dbGet('/chats/'+key);
+    const container=document.getElementById('chat-messages'); if(!container) return;
+    const arr=msgs?Object.values(msgs).sort((a,b)=>a.ts-b.ts):[];
+    const atBottom=container.scrollHeight-container.scrollTop-container.clientHeight<60;
+    container.innerHTML=arr.length?'':'<div class="empty-msg"><div class="icon">💬</div><p>Say hi! 👋</p></div>';
+    arr.forEach(msg=>{
+      const isMe=msg.fromUid===user.uid;
+      const div=document.createElement('div');
+      div.className='msg-bubble '+(isMe?'msg-me':'msg-them');
+      div.innerHTML=`<div class="msg-text">${esc(msg.text)}</div><div class="msg-time">${new Date(msg.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>`;
+      container.appendChild(div);
+    });
+    if(atBottom) container.scrollTop=container.scrollHeight;
+  }
+
+  window.sendMessage=async function(){
+    const user=getUser(); const input=document.getElementById('chat-input-field');
+    if(!user||!activeChatUid||!input) return;
+    const text=input.value.trim(); if(!text) return;
+    const key=chatKey(user.uid,activeChatUid);
+    await dbSet('/chats/'+key+'/m_'+now(),{fromUid:user.uid,fromName:user.username,text,ts:now()});
+    input.value=''; await loadMessages();
+  };
+
+  window.closeChat=function(){
+    activeChatUid=null;activeChatName='';clearInterval(chatPoll);
+    document.getElementById('chat-area').style.display='none';
+    document.getElementById('friends-content').style.display='flex';
+    loadTab(currentTab);
+  };
+
+  // ── Toast ─────────────────────────────────────
+  function showToast(msg){
+    let t=document.getElementById('fp-toast');
+    if(!t){t=document.createElement('div');t.id='fp-toast';t.style.cssText='position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--accent-cyan);border-radius:10px;padding:0.7rem 1.4rem;color:var(--text-white);font-size:0.85rem;z-index:700;white-space:nowrap;transition:opacity 0.3s;pointer-events:none';document.body.appendChild(t);}
+    t.textContent=msg;t.style.opacity='1';clearTimeout(t._timer);t._timer=setTimeout(()=>{t.style.opacity='0';},3000);
+  }
+
+  // ── Init ──────────────────────────────────────
+  function init(){
+    const tryStart=setInterval(()=>{
+      if(window.ZapHiveAuth&&window.ZapHiveAuth.getCurrentUser()){
+        clearInterval(tryStart);
+        loadTab('friends');checkBadge();
+      }
+    },300);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
